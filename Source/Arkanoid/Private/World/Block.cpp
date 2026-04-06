@@ -11,6 +11,7 @@ ABlock::ABlock()
 
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
 	SetRootComponent(StaticMesh);
+	LifeComponent = CreateDefaultSubobject<ULifeComponent>(TEXT("Life Component"));
 }
 
 void ABlock::Init(const FVector NewScale, const int32 LifeAmount, const TSubclassOf<AActor> NewBonusClass)
