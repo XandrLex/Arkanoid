@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include <Components/LifeComponent.h>
 #include "Block.generated.h"
 
-class ULifeComponent;
 
 UCLASS()
 class ARKANOID_API ABlock : public AActor
