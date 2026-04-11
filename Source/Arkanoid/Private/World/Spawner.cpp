@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-=======
 // Alexandr Sharizanov. All rights reserved.
 
 
->>>>>>> c81d547 (Добавьте файлы проекта.)
 #include "World/Spawner.h"
 #include "Components/ArrowComponent.h"
 #include "TimerManager.h"

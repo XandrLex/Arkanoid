@@ -54,6 +54,7 @@ private:
 
 public:	
     ABall();
+	FORCEINLINE int32 GetPower() const { return Power; }
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;

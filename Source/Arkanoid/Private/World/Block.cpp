@@ -18,19 +18,40 @@ void ABlock::Init(const FVector NewScale, const int32 LifeAmount, const TSubclas
 {
 	SetActorScale3D(NewScale);
     BonusClass = NewBonusClass;
+	LifeComponent->SetLife(LifeAmount);
 }
 
 void ABlock::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved,
 	FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
 {
 	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
-	if (Cast<ABall>(Other))
+
+	if (const auto Ball = Cast<ABall>(Other))
 	{
-		if (BonusClass && GetWorld())
+		if (IsValid(LifeComponent))
 		{
-			GetWorld()->SpawnActor<AActor>(BonusClass, GetActorLocation(), GetActorRotation());
+			LifeComponent->TakeDamage(Ball->GetPower());
+			if (!LifeComponent->IsAlive())
+			{
+				if (BonusClass && GetWorld())
+				{
+					GetWorld()->SpawnActor<AActor>(BonusClass, GetActorLocation(), GetActorRotation());
+				}
+				Destroy();
+			}
+			else
+			{
+				if (LifeMaterials.IsValidIndex(LifeComponent->GetLife() - 1))
+					StaticMesh->SetMaterial(0, LifeMaterials[LifeComponent->GetLife() - 1]);
+			}
 		}
-		
-		Destroy();
 	}
+}
+
+void ABlock::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (LifeMaterials.IsValidIndex(LifeComponent->GetLife() - 1))
+		StaticMesh->SetMaterial(0, LifeMaterials[LifeComponent->GetLife() - 1]);
 }
