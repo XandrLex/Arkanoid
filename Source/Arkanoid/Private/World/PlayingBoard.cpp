@@ -1,0 +1,157 @@
+// Alexandr Sharizanov. All rights reserved.
+
+
+#include "World/PlayingBoard.h"
+#include <Kismet/KismetMathLibrary.h>
+
+
+void APlayingBoard::CreateMyPreviewComponents()
+{
+	if(GridSizeX <= 0 || GridSizeY <= 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Grid size must be greater than 0"));
+		return;
+    }
+	// Вычисляем размер блока в юнитах
+	const float BlockWidth = BlockScale.X * 100.f;
+	const float BlockHeight = BlockScale.Y * 100.f;
+	const float BlockDepth = BlockScale.Z * 100.f;
+	// Вычисляем общий размер сетки, с учетом отступов
+	const float TotalWidth = GridSizeX * BlockWidth + (GridSizeX - 1) * SpacingX;
+	const float TotalHeight = GridSizeY * BlockHeight + (GridSizeY - 1) * SpacingY;
+	// Вычисляем смещение для центрирования сетки
+	const FVector CenterOffset = FVector((TotalWidth - BlockWidth) / 2, (TotalHeight - BlockHeight) / 2, 0.0f);
+	// Получаем текущую трансформацию объекта (позицию, вращение)
+	const FTransform ActorTransform = GetActorTransform();
+	// Cоздаем превью компоненты
+	for (int32 x = 0; x < GridSizeX; x++)
+	{
+		for (int32 y = 0; y < GridSizeY; y++)
+		{
+			if(PreviewMesh)
+			{
+				// Вычисляем позицию блока c учетом отступов от края
+				const float XOffset = x * (BlockWidth + SpacingX);
+				const float YOffset = y * (BlockHeight + SpacingY);
+				const FVector PreviewLocation = FVector(XOffset, YOffset, 0.0f) - CenterOffset;
+				// Преобразуем локальную позицию в мировую с учетом трансформации объекта
+				const FVector WorldPreviewLocation = ActorTransform.TransformPosition(PreviewLocation);
+				// Проверяем, есть ли что-то на месте превью-компонента
+				FCollisionQueryParams CollisionParams;
+				CollisionParams.AddIgnoredActor(this);
+				const FVector BoxExtents = FVector(BlockWidth * 0.5f, BlockHeight * 0.5f, BlockDepth * 0.5f);
+				const bool bIsBlocked = GetWorld()->OverlapBlockingTestByChannel(WorldPreviewLocation, ActorTransform.GetRotation(), ECC_Visibility, FCollisionShape::MakeBox(BoxExtents), CollisionParams);
+				if (bIsBlocked)
+				{
+					// Если место занято, рисуем красный короб для визуализации проблемы
+					DrawDebugBox(GetWorld(), WorldPreviewLocation, BoxExtents, ActorTransform.GetRotation(), FColor::Red, false, 10.0f);
+					continue;
+				}
+				else
+				{
+					// Если место свободно, создаем превью-компонент
+					UStaticMeshComponent* PreviewMeshComponent = NewObject<UStaticMeshComponent>(this);
+					PreviewMeshComponent->SetStaticMesh(PreviewMesh);
+					PreviewMeshComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+					PreviewMeshComponent->SetRelativeScale3D(BlockScale);
+					PreviewMeshComponent->SetRelativeLocation(PreviewLocation);
+					PreviewMeshComponent->RegisterComponent();
+					MyPreviewComponents.Add(PreviewMeshComponent);
+				}
+			}
+		}
+	}
+}
+
+void APlayingBoard::ClearMyPreviewComponents()
+{
+	for (UStaticMeshComponent* PreviewComponent : MyPreviewComponents)
+	{
+		if (PreviewComponent)
+		{
+			PreviewComponent->DestroyComponent();
+		}
+	}
+	MyPreviewComponents.Empty();
+}
+
+void APlayingBoard::SpawnBlockActors()
+{
+	for (UStaticMeshComponent* PreviewComponent : MyPreviewComponents)
+	{
+		if (PreviewComponent)
+		{
+			const FTransform SpawnTransform = PreviewComponent->GetComponentTransform();
+			if (auto CurrentBlock = GetWorld()->SpawnActor<ABlock>(BlockClassForSpawn, SpawnTransform))
+			{
+				// Определяем количество жизней блока на основе GameDifficulty
+				// Тернарная операция (условие ? значение_если_истина : значение_если_ложь)
+				const int32 Life = UKismetMathLibrary::RandomBoolWithWeight(GameDifficulty) ? 2 : 1;
+				// Определяем, будет ли блок бонусным на основе BonusChance
+				const auto BonusClass = UKismetMathLibrary::RandomBoolWithWeight(BonusChance) ? GetBonusClass() : nullptr;
+				CurrentBlock->Init(BlockScale, Life, BonusClass);
+				CurrentBlock->AttachToComponent(SceneRoot, FAttachmentTransformRules::KeepWorldTransform);
+				CurrentBlock->OnDestroyed.AddDynamic(this, &APlayingBoard::OnBlockDestroyed);
+				BlockActors.Add(CurrentBlock);
+			}
+		}
+	}
+}
+
+void APlayingBoard::OnBlockDestroyed(AActor* DestroyedBlock)
+{
+	BlockActors.Remove(Cast<ABlock>(DestroyedBlock));
+}
+
+APlayingBoard::APlayingBoard()
+{
+	PrimaryActorTick.bCanEverTick = false;
+
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Scene Root"));
+	SetRootComponent(SceneRoot);
+}
+
+
+void APlayingBoard::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	ClearMyPreviewComponents();
+	CreateMyPreviewComponents();
+}
+
+void APlayingBoard::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SpawnBlockActors();
+	ClearMyPreviewComponents();
+}
+
+TSubclassOf<AActor> APlayingBoard::GetBonusClass()
+{
+	if(BonusTypeByChance.Num() == 0 || !BonusTypeByChance[0].BonusClass)
+	{
+		return nullptr;
+	}
+	// Получаем случайное значение из массива с учетом веса
+	int32 TotalWeight = 0;
+	for(const auto& CurrentBonus : BonusTypeByChance)
+	{
+		TotalWeight += CurrentBonus.DropChance * 100;
+	}
+	int32 RandomWeight = UKismetMathLibrary::RandomInteger(32767) % TotalWeight;
+	for (const auto& CurrentBonus : BonusTypeByChance)
+	{
+		if (RandomWeight > CurrentBonus.DropChance * 100)
+		{
+			RandomWeight -= CurrentBonus.DropChance * 100;
+		}
+		else
+		{
+			return CurrentBonus.BonusClass;
+		}
+	}
+
+	return nullptr;
+}

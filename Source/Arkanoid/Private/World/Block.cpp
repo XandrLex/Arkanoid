@@ -19,6 +19,9 @@ void ABlock::Init(const FVector NewScale, const int32 LifeAmount, const TSubclas
 	SetActorScale3D(NewScale);
     BonusClass = NewBonusClass;
 	LifeComponent->SetLife(LifeAmount);
+
+	if (LifeMaterials.IsValidIndex(LifeComponent->GetLife() - 1))
+		StaticMesh->SetMaterial(0, LifeMaterials[LifeComponent->GetLife() - 1]);
 }
 
 void ABlock::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved,
