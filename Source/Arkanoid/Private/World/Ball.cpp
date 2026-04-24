@@ -56,6 +56,12 @@ void ABall::Tick(float DeltaTime)
 	}
 }
 
+void ABall::Destroyed()
+{
+	OnDeadEvent.Broadcast();
+	Super::Destroyed();
+}
+
 void ABall::Move(const float DeltaTime)
 {
 	const FVector Offset = Direction * Speed * DeltaTime;

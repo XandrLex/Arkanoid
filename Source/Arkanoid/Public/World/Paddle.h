@@ -7,6 +7,7 @@
 #include "Ball.h"
 #include "Components/BoxComponent.h"
 #include "Components/ArrowComponent.h"
+#include "InputMappingContext.h"
 #include "Paddle.generated.h"
 
 UCLASS()
@@ -28,6 +29,19 @@ private:
 	UArrowComponent* Arrow = nullptr;
 	UPROPERTY()
 	ABall* CurrentBall = nullptr;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Settings | Input")
+	UInputMappingContext* DefaultMappingContext = nullptr;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Settings | Input")
+	UInputAction* EscapeAction = nullptr;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Settings | Input")
+	UInputAction* SpawnBallAction = nullptr;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Settings | Input")
+	UInputAction* MoveAction = nullptr;
+	UPROPERTY()
+	TArray<UStaticMeshComponent*> BallLives;
+	void SpawnBallLives();
+	void UpdateBallLivesLocation();
+
 public:
 	
 	APaddle();
@@ -36,6 +50,17 @@ protected:
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void ExitGame();
+	UFUNCTION()
+	void StartGame();
+	UFUNCTION()
+	void Move(const FInputActionValue& Value);
+	UFUNCTION()
+	void SpawnBall();
+	UFUNCTION()
+	void BallIsDead();
 
 public:	
 	

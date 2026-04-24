@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Ball.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeadEvent);
+
 UENUM(BlueprintType)
 enum class EState : uint8
 {
@@ -29,7 +31,7 @@ struct FInitParameters
 
 	FInitParameters()
 	{
-		Scale = 1.0f;
+		Scale = 0.5f;
 		Power = 1;
 		Speed = 500.0f;
 		MaxSpeed = 2500.0f;
@@ -55,11 +57,19 @@ private:
 public:	
     ABall();
 	FORCEINLINE int32 GetPower() const { return Power; }
+	UPROPERTY(BlueprintAssignable)
+	FOnDeadEvent OnDeadEvent;
+	/**
+	* Функция для установки состояния шарика.
+	* @param NewState - новое состояние шарика.
+	*/
+	void SetBallState(const EState NewState);
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void Destroyed() override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Settings")
 	FInitParameters InitParameters;
@@ -69,9 +79,4 @@ protected:
 	*/
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void Move(const float DeltaTime);
-	/**
-	* Функция для установки состояния шарика.
-	* @param NewState - новое состояние шарика.
-	*/
-	void SetBallState(const EState NewState);
 };
