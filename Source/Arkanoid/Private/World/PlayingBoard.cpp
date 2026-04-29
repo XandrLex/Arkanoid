@@ -112,6 +112,23 @@ APlayingBoard::APlayingBoard()
 }
 
 
+void APlayingBoard::BonusDestroyCubes(const int32 Amount)
+{
+	if (Amount <= 0)
+	{
+		return;
+	}
+	const int32 NumToDestroy = FMath::Min(Amount, BlockActors.Num());
+	for (int32 i = 0; i < NumToDestroy; i++)
+	{
+		const int32 RandomIndex = FMath::RandHelper(BlockActors.Num());
+		if (BlockActors.IsValidIndex(RandomIndex))
+		{
+			BlockActors[RandomIndex]->Destroy();
+		}
+	}
+}
+
 void APlayingBoard::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
@@ -128,7 +145,7 @@ void APlayingBoard::BeginPlay()
 	ClearMyPreviewComponents();
 }
 
-TSubclassOf<AActor> APlayingBoard::GetBonusClass()
+TSubclassOf<ABonusParent> APlayingBoard::GetBonusClass()
 {
 	if(BonusTypeByChance.Num() == 0 || !BonusTypeByChance[0].BonusClass)
 	{
@@ -140,7 +157,7 @@ TSubclassOf<AActor> APlayingBoard::GetBonusClass()
 	{
 		TotalWeight += CurrentBonus.DropChance * 100;
 	}
-	int32 RandomWeight = UKismetMathLibrary::RandomInteger(32767) % TotalWeight;
+	int32 RandomWeight = FMath::RandHelper(TotalWeight);
 	for (const auto& CurrentBonus : BonusTypeByChance)
 	{
 		if (RandomWeight > CurrentBonus.DropChance * 100)

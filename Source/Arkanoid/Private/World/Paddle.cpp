@@ -16,6 +16,13 @@ void APaddle::SpawnBallLives()
 	{
 		return;
 	}
+
+	for (auto BallLive : BallLives)
+	{
+		BallLive->DestroyComponent();
+	}
+	BallLives.Empty();
+
 	for (int8 i = 0; i < Lives - 1; ++i)
 	{
 		auto NewMeshComponent = NewObject<UStaticMeshComponent>(this, *FString::Printf(TEXT("Lives %d"), i + 1));
@@ -115,7 +122,8 @@ void APaddle::StartGame()
 	if(CurrentBall)
 	{
 		CurrentBall->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		CurrentBall->SetBallState(EState::Moving);
+		FVector Dir = Arrow->GetForwardVector();
+		CurrentBall->Launch(Dir, 500.0f);
 	}
 }
 
@@ -141,7 +149,7 @@ void APaddle::SpawnBall()
 			CurrentBall->SetOwner(this);
 			CurrentBall->SetBallState(EState::Idle);
 			CurrentBall->OnDeadEvent.AddDynamic(this, &APaddle::BallIsDead);
-			CurrentBall->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+			CurrentBall->AttachToComponent(Arrow, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 		}
 	}
 }
@@ -170,4 +178,87 @@ void APaddle::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(SpawnBallAction, ETriggerEvent::Started, this, &APaddle::StartGame);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APaddle::Move);
 	}
+}
+
+void APaddle::BonusChangeSize(const float AdditionalSize, const float BonusTime)
+{
+	if(AdditionalSize && BonusTime)
+	{
+		if(!GetWorld()->GetTimerManager().IsTimerActive(TimerForBonusSize))
+		{
+			FVector TempScale = GetActorScale3D();
+			TempScale.Y = TempScale.Y + TempScale.Y * AdditionalSize;
+			SetActorScale3D(TempScale);
+			BoxCollider->SetBoxExtent(FVector(25.0f, 50.0f + 20.0f / TempScale.Y, 25.0f));
+		}
+		GetWorld()->GetTimerManager().SetTimer(TimerForBonusSize, this, &APaddle::SetDefaultSize, BonusTime, false);
+		
+			
+	}
+}
+
+void APaddle::BonusChangeLife(const int32 Amount)
+{
+	Lives += Amount;
+	SpawnBallLives();
+}
+
+void APaddle::BonusChangeBallSpeed(const float AdditionalSpeed)
+{
+	if (IsValid(CurrentBall))
+	{
+		CurrentBall->ChangeSpeed(AdditionalSpeed);
+	}
+}
+
+void APaddle::BonusChangeBallPower(const int32 Amount, const float BonusTime)
+{
+	if (IsValid(CurrentBall))
+	{
+		CurrentBall->ChangeBallPower(Amount, BonusTime);
+	}
+}
+
+void APaddle::SetDefaultSize()
+{
+	SetActorScale3D(DefaultScale);
+	BoxCollider->SetBoxExtent(FVector(25.0f, 50.0f + 20.0f / DefaultScale.Y, 25.0f));
+}
+
+// Включает режим "прилипший шарик" на каретке на время BonusTime
+void APaddle::BonusStickyBall(const float BonusTime)
+{
+	if (BonusTime <= 0.0f)
+	{
+		// Если время не задано — просто включаем флаг без таймера
+		bStickyEnabled = true;
+		return;
+	}
+
+	// Включаем режим, сбрасываем таймер и запускаем новый
+	if (!bStickyEnabled)
+	{
+		bStickyEnabled = true;
+	}
+	GetWorld()->GetTimerManager().ClearTimer(TimerForBonusSticky);
+	GetWorld()->GetTimerManager().SetTimer(TimerForBonusSticky, this, &APaddle::DisableSticky, BonusTime, false);
+}
+
+// Отключает режим "прилипший шарик"
+void APaddle::DisableSticky()
+{
+	bStickyEnabled = false;
+}
+
+// Попытка прикрепить шарик при его столкновении с кареткой
+bool APaddle::TryAttachBall(ABall* Ball)
+{
+	if (!IsValid(Ball) || !bStickyEnabled)
+		return false;
+	CurrentBall = Ball;
+	Ball->SetOwner(this);
+	Ball->SetBallState(EState::Idle);
+	Ball->AttachToComponent(Arrow, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	
+	return true;
 }

@@ -3,6 +3,7 @@
 
 #include "World/Ball.h"
 #include "Components/ArrowComponent.h"
+#include <World/Paddle.h>
 
 ABall::ABall()
 {
@@ -35,9 +36,13 @@ void ABall::BeginPlay()
 	Super::BeginPlay();
 	
 	Direction = GetActorForwardVector().GetSafeNormal();
-	SetBallState(EState::Moving);
-}
 
+	if (StaticMesh)
+	{
+		DefaultMaterial = StaticMesh->GetMaterial(0);
+	}
+	UpdateBallMaterial();
+}
 
 void ABall::Tick(float DeltaTime)
 {
@@ -69,6 +74,21 @@ void ABall::Move(const float DeltaTime)
 	AddActorWorldOffset(Offset, true, &HitResult);
 	if(HitResult.bBlockingHit)
 	{
+		// ѕопытка обработать столкновение с кареткой: если у каретки активен sticky Ч прикрепл€ем шарик
+		if (AActor* OtherActor = HitResult.GetActor())
+		{
+			if (auto Paddle = Cast<APaddle>(OtherActor))
+			{
+				// TryAttachBall выполнит проверку на существующий CurrentBall и флаг sticky
+				if (Paddle->TryAttachBall(this))
+				{
+					// ѕрисоединение прошло Ч прекращаем дальнейшую обработку отражени€
+					return;
+				}
+			}
+		}
+
+		// —тандартное отражение от поверхности
 		Direction = Direction - 2 * (FVector::DotProduct(Direction, HitResult.Normal)) * HitResult.Normal;
 		Direction.Z = 0.0f;
 		Direction = Direction.GetSafeNormal();
@@ -84,4 +104,59 @@ void ABall::Move(const float DeltaTime)
 void ABall::SetBallState(const EState NewState)
 {
 	State = NewState;
+}
+
+void ABall::ChangeSpeed(const float AdditionalSpeed)
+{
+	if (AdditionalSpeed < 0.0f)
+	{
+		Speed = FMath::Min(Speed - Speed * AdditionalSpeed, InitParameters.Speed);
+	}
+	else if (AdditionalSpeed > 0.0f)
+	{
+		Speed = FMath::Max(Speed + Speed * AdditionalSpeed, InitParameters.MaxSpeed);
+	}
+}
+
+void ABall::ChangeBallPower(const int32 Amount, const float BonusTime)
+{
+	if (Amount != 0 && BonusTime > 0.0f)
+	{
+		if (!GetWorld()->GetTimerManager().IsTimerActive(TimerBallPower))
+		{
+			Power = FMath::Max(Power + Amount, 1);
+			UpdateBallMaterial();
+		}
+		GetWorld()->GetTimerManager().SetTimer(TimerBallPower, this, &ABall::ResetBallPower, BonusTime, false);
+	}
+}
+
+void ABall::Launch(const FVector& LaunchDirection, float LaunchSpeed)
+{
+	Direction = LaunchDirection.GetSafeNormal();
+	Speed = LaunchSpeed;
+	SetBallState(EState::Moving);
+}
+
+void ABall::ResetBallPower()
+{
+	Power = InitParameters.Power;
+	UpdateBallMaterial();
+}
+
+void ABall::UpdateBallMaterial()
+{
+	if (!StaticMesh)
+		return;
+	if (Power > 1)
+	{
+		if (PowerMaterial)
+		{
+			StaticMesh->SetMaterial(0, PowerMaterial);
+		}
+	}
+	else
+	{
+		StaticMesh->SetMaterial(0, DefaultMaterial);
+	}
 }

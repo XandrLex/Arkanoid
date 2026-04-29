@@ -64,6 +64,11 @@ public:
 	* @param NewState - новое состояние шарика.
 	*/
 	void SetBallState(const EState NewState);
+	void ChangeSpeed(const float AdditionalSpeed);
+	void ChangeBallPower(const int32 Amount, const float BonusTime);
+	void Launch(const FVector& LaunchDirection, float LaunchSpeed);
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Settings")
+	UMaterialInterface* PowerMaterial = nullptr;
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -79,4 +84,10 @@ protected:
 	*/
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void Move(const float DeltaTime);
+	// Работа с бонусами
+	FTimerHandle TimerBallPower;
+	void ResetBallPower();
+	UPROPERTY()
+	UMaterialInterface* DefaultMaterial = nullptr;
+	void UpdateBallMaterial();
 };

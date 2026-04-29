@@ -74,4 +74,28 @@ public:
 	float Speed = 2000.0f;
 	UPROPERTY(EditDefaultsOnly, Category = "Settings | Game")
 	FVector DefaultScale = FVector(0.4f, 2.4f, 0.5f);
+
+	//Работа с бонусами
+public:
+
+	void BonusChangeSize(const float AdditionalSize, const float BonusTime);
+	void BonusChangeLife(const int32 Amount);
+	void BonusChangeBallSpeed(const float AdditionalSpeed);
+	void BonusChangeBallPower(const int32 Amount, const float BonusTime);
+	// Включить бонус "прилипший шарик" на каретке на время BonusTime
+	void BonusStickyBall(const float BonusTime);
+	// Попытка прикрепить указанный шарик к этой каретке. Возвращает true, если прикреплено.
+	bool TryAttachBall(ABall* Ball);
+
+protected:
+
+	FTimerHandle TimerForBonusSize;
+	FTimerHandle TimerForBonusSticky;
+
+	UFUNCTION()
+	void SetDefaultSize();
+	// Флаг активированного режима прилипшего шарика
+	bool bStickyEnabled = false;
+	// Отключить режим прилипшего шарика
+	void DisableSticky();
 };

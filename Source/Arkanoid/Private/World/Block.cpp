@@ -2,7 +2,7 @@
 
 
 #include "World/Block.h"
-#include <World/Ball.h>
+#include "World/Ball.h"
 
 
 ABlock::ABlock()
@@ -14,7 +14,7 @@ ABlock::ABlock()
 	LifeComponent = CreateDefaultSubobject<ULifeComponent>(TEXT("Life Component"));
 }
 
-void ABlock::Init(const FVector NewScale, const int32 LifeAmount, const TSubclassOf<AActor> NewBonusClass)
+void ABlock::Init(const FVector NewScale, const int32 LifeAmount, const TSubclassOf<ABonusParent> NewBonusClass)
 {
 	SetActorScale3D(NewScale);
     BonusClass = NewBonusClass;
@@ -38,7 +38,8 @@ void ABlock::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveCom
 			{
 				if (BonusClass && GetWorld())
 				{
-					GetWorld()->SpawnActor<AActor>(BonusClass, GetActorLocation(), GetActorRotation());
+					auto CurrentBonus = GetWorld()->SpawnActor<ABonusParent>(BonusClass, GetActorLocation(), GetActorRotation());
+					CurrentBonus->InitScale(GetActorScale3D());
 				}
 				Destroy();
 			}

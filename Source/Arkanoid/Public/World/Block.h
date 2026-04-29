@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include <Components/LifeComponent.h>
+#include "Components/LifeComponent.h"
+#include "Bonuses/BonusParent.h"
 #include "Block.generated.h"
-
 
 UCLASS()
 class ARKANOID_API ABlock : public AActor
@@ -20,12 +20,12 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	ULifeComponent* LifeComponent = nullptr;
 
-	TSubclassOf<AActor> BonusClass = nullptr;
+	TSubclassOf<ABonusParent> BonusClass = nullptr;
 
 public:	
 	ABlock();
 
-	void Init(const FVector NewScale, const int32 LifeAmount, const TSubclassOf<AActor> NewBonusClass = nullptr);
+	void Init(const FVector NewScale, const int32 LifeAmount, const TSubclassOf<ABonusParent> NewBonusClass = nullptr);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 
 	TArray<UMaterialInterface*> LifeMaterials;
