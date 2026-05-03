@@ -22,12 +22,17 @@ private:
 
 	TSubclassOf<ABonusParent> BonusClass = nullptr;
 
+	int32 MaxLife = 1;
+
 public:	
 	ABlock();
 
 	void Init(const FVector NewScale, const int32 LifeAmount, const TSubclassOf<ABonusParent> NewBonusClass = nullptr);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
+	int32 ScoreByLife = 100;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 	TArray<UMaterialInterface*> LifeMaterials;
 
 protected:
