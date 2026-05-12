@@ -2,7 +2,8 @@
 
 
 #include "World/PlayingBoard.h"
-#include <Kismet/KismetMathLibrary.h>
+#include "Kismet/KismetMathLibrary.h"
+#include "Framework/ArkanoidGameMode.h"
 
 
 void APlayingBoard::CreateMyPreviewComponents()
@@ -101,6 +102,14 @@ void APlayingBoard::SpawnBlockActors()
 void APlayingBoard::OnBlockDestroyed(AActor* DestroyedBlock)
 {
 	BlockActors.Remove(Cast<ABlock>(DestroyedBlock));
+
+	if (!BlockActors.Num())
+	{
+		if (auto GM = Cast<AArkanoidGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			GM->GameEnded();
+		}
+	}
 }
 
 APlayingBoard::APlayingBoard()

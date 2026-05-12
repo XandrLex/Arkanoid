@@ -262,3 +262,8 @@ bool APaddle::TryAttachBall(ABall* Ball)
 	
 	return true;
 }
+
+float APaddle::GetWidth() const
+{
+	return BoxCollider->GetScaledBoxExtent().Y;
+}

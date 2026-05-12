@@ -3,7 +3,7 @@
 
 #include "World/Ball.h"
 #include "Components/ArrowComponent.h"
-#include <World/Paddle.h>
+#include "World/Paddle.h"
 
 ABall::ABall()
 {
@@ -70,34 +70,80 @@ void ABall::Destroyed()
 void ABall::Move(const float DeltaTime)
 {
 	const FVector Offset = Direction * Speed * DeltaTime;
+
 	FHitResult HitResult;
 	AddActorWorldOffset(Offset, true, &HitResult);
-	if(HitResult.bBlockingHit)
+
+	if (!HitResult.bBlockingHit)
+		return;
+
+	AActor* OtherActor = HitResult.GetActor();
+
+	// УДАР О ПЛАТФОРМУ
+	if (auto Paddle = Cast<APaddle>(OtherActor))
 	{
-		// Попытка обработать столкновение с кареткой: если у каретки активен sticky — прикрепляем шарик
-		if (AActor* OtherActor = HitResult.GetActor())
+		// Sticky логика
+		if (Paddle->TryAttachBall(this))
 		{
-			if (auto Paddle = Cast<APaddle>(OtherActor))
-			{
-				// TryAttachBall выполнит проверку на существующий CurrentBall и флаг sticky
-				if (Paddle->TryAttachBall(this))
-				{
-					// Присоединение прошло — прекращаем дальнейшую обработку отражения
-					return;
-				}
-			}
+			return;
 		}
 
-		// Стандартное отражение от поверхности
-		Direction = Direction - 2 * (FVector::DotProduct(Direction, HitResult.Normal)) * HitResult.Normal;
-		Direction.Z = 0.0f;
-		Direction = Direction.GetSafeNormal();
+		// Вычисляем смещение относительно центра платформы
+		const FVector PaddleLocation = Paddle->GetActorLocation();
+		const FVector BallLocation = GetActorLocation();
+
+		float RelativeHit = (BallLocation.Y - PaddleLocation.Y) / Paddle->GetWidth();
+		RelativeHit = FMath::Clamp(RelativeHit, -1.0f, 1.0f);
+
+		// Формируем новое направление (вперёд + угол)
+		FVector NewDirection = FVector(1.0f, RelativeHit, 0.0f);
+
+		// Добавляем влияние движения платформы
+		NewDirection.Y += Paddle->GetVelocity().Y * 0.002f;
+
+		Direction = NewDirection.GetSafeNormal();
+
+		// Чуть ускоряем при ударе
 		if (Speed < InitParameters.MaxSpeed)
 		{
-			Speed += InitParameters.Speed * 0.1f;
+			Speed += InitParameters.Speed * 0.05f;
 			Speed = FMath::Min(Speed, InitParameters.MaxSpeed);
 		}
-		UE_LOG(LogTemp, Warning, TEXT("Ball name %s is speed %f"), *GetName(), Speed);
+		return;
+	}
+
+	// УДАР О СТЕНЫ / БЛОКИ
+	const FVector Normal = HitResult.Normal;
+
+	// Упрощённое отражение (аркадное)
+	if (FMath::Abs(Normal.X) > 0.9f)
+	{
+		Direction.X *= -1.0f;
+	}
+	else
+	{
+		Direction.Y *= -1.0f;
+	}
+
+	// АНТИ-ЗАЦИКЛИВАНИЕ
+	// Маленький рандом
+	Direction.Y += FMath::RandRange(-0.1f, 0.1f);
+
+	// Минимальный вертикальный угол
+	const float MinForward = 0.25f;
+
+	if (FMath::Abs(Direction.X) < MinForward)
+	{
+		Direction.X = FMath::Sign(Direction.X) * MinForward;
+	}
+
+	Direction = Direction.GetSafeNormal();
+
+	// УСКОРЕНИЕ
+	if (Speed < InitParameters.MaxSpeed)
+	{
+		Speed += InitParameters.Speed * 0.1f;
+		Speed = FMath::Min(Speed, InitParameters.MaxSpeed);
 	}
 }
 

@@ -75,6 +75,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Settings | Game")
 	FVector DefaultScale = FVector(0.4f, 2.4f, 0.5f);
 
+	float GetWidth() const;
+
 	//Работа с бонусами
 public:
 
