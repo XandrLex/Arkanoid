@@ -2,16 +2,19 @@
 
 
 #include "World/Paddle.h"
-#include <EnhancedInputSubsystems.h>
-#include <Kismet/GameplayStatics.h>
-#include <EnhancedInputComponent.h>
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "Framework/ArkanoidGameMode.h"
+#include "Framework/ArkanoidPlayerController.h"
+#include "Kismet/GameplayStatics.h"
+
 
 
 
 void APaddle::SpawnBallLives()
 {
 	UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-	UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+	UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial_Inst.BasicShapeMaterial_Inst"));
 	if (!Mesh || !Material)
 	{
 		return;
@@ -114,12 +117,15 @@ void APaddle::BeginPlay()
 
 void APaddle::ExitGame()
 {
-	UGameplayStatics::OpenLevel(GetWorld(), "Menu", true);
+	if (const auto PC = Cast<AArkanoidPlayerController>(Controller))
+	{
+		PC->ExitButtonPressed();
+	}
 }
 
 void APaddle::StartGame()
 {
-	if(CurrentBall)
+	if (CurrentBall && CurrentBall->GetAttachParentActor() == this)
 	{
 		CurrentBall->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		FVector Dir = Arrow->GetForwardVector();
@@ -164,6 +170,13 @@ void APaddle::BallIsDead()
 		BallLives[Lives - 1]->DestroyComponent();
 		BallLives.RemoveAt(Lives - 1);
 		UpdateBallLivesLocation();
+	}
+	else
+	{
+		if (const auto Gm = Cast<AArkanoidGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			Gm->GameEnded(false);
+		}
 	}
 }
 

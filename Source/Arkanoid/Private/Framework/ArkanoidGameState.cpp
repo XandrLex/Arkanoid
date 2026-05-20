@@ -32,5 +32,5 @@ void AArkanoidGameState::GetGameTime(int32& Minutes, int32& Seconds, int32& Mill
 {
 	Minutes = static_cast<int32>(GameTime) / 60;
 	Seconds = static_cast<int32>(GameTime) % 60;
-	Milliseconds = static_cast<int32>(GameTime - FMath::Floor(GameTime)) * 1000;
+	Milliseconds = static_cast<int32>((GameTime - FMath::Floor(GameTime)) * 1000);
 }

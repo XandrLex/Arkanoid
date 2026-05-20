@@ -105,9 +105,9 @@ void APlayingBoard::OnBlockDestroyed(AActor* DestroyedBlock)
 
 	if (!BlockActors.Num())
 	{
-		if (auto GM = Cast<AArkanoidGameMode>(GetWorld()->GetAuthGameMode()))
+		if (const auto GM = Cast<AArkanoidGameMode>(GetWorld()->GetAuthGameMode()))
 		{
-			GM->GameEnded();
+			GM->GameEnded(true);
 		}
 	}
 }

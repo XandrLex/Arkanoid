@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Ball.generated.h"
 
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeadEvent);
 
 UENUM(BlueprintType)

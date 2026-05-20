@@ -3,6 +3,7 @@
 
 #include "Framework/ArkanoidGameMode.h"
 #include "Framework/ArkanoidGameState.h"
+#include "Framework/ArkanoidPlayerController.h"
 #include "Framework/ArkanoidPlayerState.h"	
 
 
@@ -27,7 +28,7 @@ void AArkanoidGameMode::GameStarted()
 	}
 }
 
-void AArkanoidGameMode::GameEnded()
+void AArkanoidGameMode::GameEnded(const bool bIsWinner)
 {
 	auto ArkanoidGameState = Cast<AArkanoidGameState>(GameState);
 	if (ArkanoidGameState)
@@ -35,5 +36,15 @@ void AArkanoidGameMode::GameEnded()
 		ArkanoidGameState->StopGame();
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Game Ended!"));
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		if (PlayerState)
+		{
+			const auto Player = Cast<AArkanoidPlayerController>(PlayerState->GetPlayerController());
+			if (Player)
+			{
+				Player->ShowGameEndMenu(bIsWinner);
+			}
+		}
+	}
 }

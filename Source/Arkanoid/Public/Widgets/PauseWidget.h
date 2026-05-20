@@ -38,6 +38,10 @@ protected:
 public:
 	UPROPERTY(BlueprintAssignable, Category = "PauseWidget")
 	FOnGameResume OnGameResume;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+	USoundBase* WinSound = nullptr;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+	USoundBase* LoseSound = nullptr;
 
 	void SetWinStatus(const bool bWinStatus);
 };
