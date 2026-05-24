@@ -55,9 +55,15 @@ private:
 	FVector Direction = FVector::ZeroVector;
 	EState State = EState::Idle;
 
+	// Флаг режима "огненный шар" (пробивает блоки)
+	bool bIsFireBall = false;
+
 public:	
     ABall();
 	FORCEINLINE int32 GetPower() const { return Power; }
+	// Проверка — является ли шарик огненным
+	FORCEINLINE bool IsFireBall() const { return bIsFireBall; }
+
 	UPROPERTY(BlueprintAssignable)
 	FOnDeadEvent OnDeadEvent;
 	/**
@@ -68,6 +74,12 @@ public:
 	void ChangeSpeed(const float AdditionalSpeed);
 	void ChangeBallPower(const int32 Amount, const float BonusTime);
 	void Launch(const FVector& LaunchDirection, float LaunchSpeed);
+
+	// Включить режим огненного шарика на Duration секунд (если Duration <= 0 — включить навсегда)
+	void EnableFireBall(float Duration);
+	// Выключить режим огненного шарика
+	void DisableFireBall();
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Settings")
 	UMaterialInterface* PowerMaterial = nullptr;
 
@@ -87,6 +99,7 @@ protected:
 	void Move(const float DeltaTime);
 	// Работа с бонусами
 	FTimerHandle TimerBallPower;
+	FTimerHandle TimerFireBall;
 	void ResetBallPower();
 	UPROPERTY()
 	UMaterialInterface* DefaultMaterial = nullptr;

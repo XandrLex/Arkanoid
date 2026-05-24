@@ -4,6 +4,9 @@
 #include "World/Ball.h"
 #include "Components/ArrowComponent.h"
 #include "World/Paddle.h"
+#include "World/Block.h"
+#include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
 
 ABall::ABall()
 {
@@ -21,7 +24,6 @@ ABall::ABall()
 		StaticMesh->SetStaticMesh(SphereMeshAsset.Object);
 	}
 }
-
 
 void ABall::OnConstruction(const FTransform& Transform)
 {
@@ -79,31 +81,31 @@ void ABall::Move(const float DeltaTime)
 
 	AActor* OtherActor = HitResult.GetActor();
 
-	// ���� � ���������
+	// УДАР О ПЛАТФОРМУ
 	if (auto Paddle = Cast<APaddle>(OtherActor))
 	{
-		// Sticky ������
+		// Sticky логика
 		if (Paddle->TryAttachBall(this))
 		{
 			return;
 		}
 
-		// ��������� �������� ������������ ������ ���������
+		// Вычисляем смещение относительно центра платформы
 		const FVector PaddleLocation = Paddle->GetActorLocation();
 		const FVector BallLocation = GetActorLocation();
 
 		float RelativeHit = (BallLocation.Y - PaddleLocation.Y) / Paddle->GetWidth();
 		RelativeHit = FMath::Clamp(RelativeHit, -1.0f, 1.0f);
 
-		// ��������� ����� ����������� (����� + ����)
+		// Формируем новое направление (вперёд + угол)
 		FVector NewDirection = FVector(1.0f, RelativeHit, 0.0f);
 
-		// ��������� ������� �������� ���������
+		// Добавляем влияние движения платформы
 		NewDirection.Y += Paddle->GetVelocity().Y * 0.002f;
 
 		Direction = NewDirection.GetSafeNormal();
 
-		// ���� �������� ��� �����
+		// Чуть ускоряем при ударе
 		if (Speed < InitParameters.MaxSpeed)
 		{
 			Speed += InitParameters.Speed * 0.05f;
@@ -112,10 +114,22 @@ void ABall::Move(const float DeltaTime)
 		return;
 	}
 
-	// ���� � ����� / �����
+	// УДАР О БЛОК ИЛИ СТЕНЫ
+	// Если шар в режиме огненного шарика и попал в блок, НЕ отражаем его — позволяем блоку обработать попадание и уничтожиться,
+	// а шар продолжит движение (отталкивается только от стен и каретки).
+	if (bIsFireBall)
+	{
+		if (auto Block = Cast<ABlock>(OtherActor))
+		{
+			// Не меняем Direction — просто выходим, чтобы блок провёл свою логику (NotifyHit в ABlock)
+			return;
+		}
+	}
+
+	// Обычное отражение по нормали
 	const FVector Normal = HitResult.Normal;
 
-	// ���������� ��������� (��������)
+	// Упрощённое отражение (аркадное)
 	if (FMath::Abs(Normal.X) > 0.9f)
 	{
 		Direction.X *= -1.0f;
@@ -125,11 +139,11 @@ void ABall::Move(const float DeltaTime)
 		Direction.Y *= -1.0f;
 	}
 
-	// ����-������������
-	// ��������� ������
+	// АНТИ-ЗАЦИКЛИВАНИЕ
+	// Маленький рандом
 	Direction.Y += FMath::RandRange(-0.1f, 0.1f);
 
-	// ����������� ������������ ����
+	// Минимальный вертикальный угол
 	const float MinForward = 0.25f;
 
 	if (FMath::Abs(Direction.X) < MinForward)
@@ -139,7 +153,7 @@ void ABall::Move(const float DeltaTime)
 
 	Direction = Direction.GetSafeNormal();
 
-	// ���������
+	// УСКОРЕНИЕ
 	if (Speed < InitParameters.MaxSpeed)
 	{
 		Speed += InitParameters.Speed * 0.1f;
@@ -205,4 +219,23 @@ void ABall::UpdateBallMaterial()
 	{
 		StaticMesh->SetMaterial(0, DefaultMaterial);
 	}
+}
+
+// Включить режим огненного шарика на Duration секунд.
+// Если Duration <= 0.0f — режим включается без таймера (можно выключить вручную через DisableFireBall).
+void ABall::EnableFireBall(float Duration)
+{
+	bIsFireBall = true;
+
+	if (Duration > 0.0f && GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(TimerFireBall);
+		GetWorld()->GetTimerManager().SetTimer(TimerFireBall, this, &ABall::DisableFireBall, Duration, false);
+	}
+}
+
+// Выключить режим огненного шарика
+void ABall::DisableFireBall()
+{
+	bIsFireBall = false;
 }
