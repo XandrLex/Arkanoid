@@ -24,6 +24,8 @@ private:
 	UButton* RestartButton = nullptr;
 	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = "true"))
 	UButton* MenuButton = nullptr;
+	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = "true"))
+	UButton* NextLevelButton = nullptr;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -34,6 +36,8 @@ protected:
 	void RestartGame();
 	UFUNCTION()
 	void BackToMenu();
+	UFUNCTION()
+	void NextLevel();
 
 public:
 	UPROPERTY(BlueprintAssignable, Category = "PauseWidget")

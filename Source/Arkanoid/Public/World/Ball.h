@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Ball.generated.h"
 
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeadEvent);
 
 UENUM(BlueprintType)
@@ -23,10 +22,13 @@ struct FInitParameters
 
 	UPROPERTY(EditDefaultsOnly, meta = (Tooltip = "Стартовый размер"))
 	float Scale;
+
 	UPROPERTY(EditDefaultsOnly, meta = (Tooltip = "Начальная сила"))
 	int32 Power;
+
 	UPROPERTY(EditDefaultsOnly, meta = (Tooltip = "Начальная скорость"))
 	float Speed;
+
 	UPROPERTY(EditDefaultsOnly, meta = (Tooltip = "Максимальная скорость"))
 	float MaxSpeed;
 
@@ -45,27 +47,40 @@ class ARKANOID_API ABall : public AActor
 	GENERATED_BODY()
 
 private:
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* StaticMesh = nullptr;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	class UArrowComponent* ForwardArrow = nullptr;
 
 	int32 Power = 1;
+
 	float Speed = 500.0f;
+
 	FVector Direction = FVector::ZeroVector;
+
 	EState State = EState::Idle;
 
-	// Флаг режима "огненный шар" (пробивает блоки)
-	bool bIsFireBall = false;
+	// Флаг, разрешающий прикрепление шарика к каретке
+	bool bCanBeAttached = true;
+	// Время последней обработанной коллизии (предотвращает множественные реакции на одно и то же пересечение)
+	float LastCollisionTime = -1.0f;
+    // Минимальный интервал между обработками последовательных столкновений (в секундах)
+	float CollisionIgnoreInterval = 0.02f;
 
-public:	
-    ABall();
+public:
+
+	ABall();
+
 	FORCEINLINE int32 GetPower() const { return Power; }
-	// Проверка — является ли шарик огненным
-	FORCEINLINE bool IsFireBall() const { return bIsFireBall; }
+	// Управление возможностью прикрепления к каретке
+	FORCEINLINE void SetCanBeAttached(const bool b) { bCanBeAttached = b; }
+	FORCEINLINE bool CanBeAttached() const { return bCanBeAttached; }
 
 	UPROPERTY(BlueprintAssignable)
 	FOnDeadEvent OnDeadEvent;
+
 	/**
 	* Функция для установки состояния шарика.
 	* @param NewState - новое состояние шарика.
@@ -73,35 +88,39 @@ public:
 	void SetBallState(const EState NewState);
 	void ChangeSpeed(const float AdditionalSpeed);
 	void ChangeBallPower(const int32 Amount, const float BonusTime);
+	void SetBallBonus(const float BallLifeTime = 10.0f);
 	void Launch(const FVector& LaunchDirection, float LaunchSpeed);
-
-	// Включить режим огненного шарика на Duration секунд (если Duration <= 0 — включить навсегда)
-	void EnableFireBall(float Duration);
-	// Выключить режим огненного шарика
-	void DisableFireBall();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Settings")
 	UMaterialInterface* PowerMaterial = nullptr;
 
 protected:
+
 	virtual void OnConstruction(const FTransform& Transform) override;
+
 	virtual void BeginPlay() override;
+
 	virtual void Tick(float DeltaTime) override;
+
 	virtual void Destroyed() override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Settings")
 	FInitParameters InitParameters;
+
 	/**
 	* Функция для обработки движения шарика.
 	* @param DeltaTime - время, прошедшее с последнего кадра.
 	*/
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void Move(const float DeltaTime);
-	// Работа с бонусами
+
+	// Таймер силы шарика
 	FTimerHandle TimerBallPower;
-	FTimerHandle TimerFireBall;
+
 	void ResetBallPower();
+
 	UPROPERTY()
 	UMaterialInterface* DefaultMaterial = nullptr;
+
 	void UpdateBallMaterial();
 };

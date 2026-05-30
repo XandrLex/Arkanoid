@@ -3,6 +3,7 @@
 
 #include "Widgets/PauseWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "Framework/ArkanoidGameInstance.h"
 
 void UPauseWidget::NativeConstruct()
 {
@@ -18,6 +19,13 @@ void UPauseWidget::NativeConstruct()
 	if (MenuButton)
 	{
 		MenuButton->OnReleased.AddDynamic(this, &UPauseWidget::BackToMenu);
+	}
+	if (NextLevelButton)
+	{
+		NextLevelButton->OnReleased.AddDynamic(this, &UPauseWidget::NextLevel);
+		// По умолчанию скрываем кнопку — будет отображаться только при победе
+		NextLevelButton->SetIsEnabled(false);
+		NextLevelButton->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 
@@ -37,6 +45,16 @@ void UPauseWidget::BackToMenu()
 	UGameplayStatics::OpenLevel(this, FName("Menu"));
 }
 
+void UPauseWidget::NextLevel()
+{
+	// Получаем экземпляр GameInstance и просим открыть следующий уровень
+	if (const auto GI = Cast<UArkanoidGameInstance>(GetGameInstance()))
+	{
+		const FString CurrentLevel = UGameplayStatics::GetCurrentLevelName(this);
+		GI->OpenNextLevel(CurrentLevel);
+	}
+}
+
 void UPauseWidget::SetWinStatus(const bool bWinStatus)
 {
 	if (!StatusText)
@@ -48,6 +66,21 @@ void UPauseWidget::SetWinStatus(const bool bWinStatus)
 	{
 		ResumeButton->SetIsEnabled(false);
 		ResumeButton->SetVisibility(ESlateVisibility::Hidden);
+	}
+
+	// Управление видимостью и доступностью NextLevelButton в зависимости от статуса
+	if (NextLevelButton)
+	{
+		if (bWinStatus)
+		{
+			NextLevelButton->SetIsEnabled(true);
+			NextLevelButton->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			NextLevelButton->SetIsEnabled(false);
+			NextLevelButton->SetVisibility(ESlateVisibility::Hidden);
+		}
 	}
 
 	if (bWinStatus)

@@ -5,7 +5,7 @@
 #include "GameFramework/GameUserSettings.h"
 #include "SaveFiles/RecordsSaveGame.h"
 #include "Kismet/GameplayStatics.h"
-
+#include "AssetRegistry/AssetRegistryModule.h"
 
 void UArkanoidGameInstance::Init()
 {
@@ -13,6 +13,31 @@ void UArkanoidGameInstance::Init()
 
 	SetGameSettings();
 	LoadRecords();
+	CollectGameLevels();
+}
+
+void UArkanoidGameInstance::CollectGameLevels()
+{
+	LevelNames.Empty();
+
+	const FAssetRegistryModule& AssetRegistryModule =
+		FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+	FARFilter Filter;
+	Filter.PackagePaths.Add(*LevelsPath);
+	Filter.bRecursivePaths = false;
+
+	Filter.ClassPaths.Add(UWorld::StaticClass()->GetClassPathName());
+
+	TArray<FAssetData> AssetDataList;
+	AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+
+	for (const FAssetData& AssetData : AssetDataList)
+	{
+		LevelNames.Add(AssetData.AssetName.ToString());
+	}
+
+	LevelNames.Sort();
 }
 
 void UArkanoidGameInstance::SetGameSettings() const
@@ -56,6 +81,40 @@ void UArkanoidGameInstance::DeleteRecords() const
 		if (GEngine)
 			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, ("Deleted Records %s", *NameSaveFile));
 	}
+}
+
+void UArkanoidGameInstance::OpenNextLevel(const FString& CurrentLevelName)
+{
+	const int32 CurrentLevelIndex = LevelNames.Find(CurrentLevelName);
+
+	// Попытка открыть следующий уровень
+	if (CurrentLevelIndex != INDEX_NONE)
+	{
+		const int32 NextIndex = CurrentLevelIndex + 1;
+		if (LevelNames.IsValidIndex(NextIndex))
+		{
+			const FString NextLevelName = LevelNames[NextIndex];
+			if (FPackageName::DoesPackageExist(FString::Printf(TEXT("%s/%s"), *LevelsPath, *NextLevelName)))
+			{
+				UGameplayStatics::OpenLevel(this, FName(*NextLevelName));
+				return;
+			}
+		}
+	}
+
+	// Если следующего уровня нет (последний) — открыть первый уровень (wrap-around), если он существует
+	if (LevelNames.IsValidIndex(0))
+	{
+		const FString FirstLevelName = LevelNames[0];
+		if (FPackageName::DoesPackageExist(FString::Printf(TEXT("%s/%s"), *LevelsPath, *FirstLevelName)))
+		{
+			UGameplayStatics::OpenLevel(this, FName(*FirstLevelName));
+			return;
+		}
+	}
+
+	// Фолбэк — меню, если ничего не найдено
+	UGameplayStatics::OpenLevel(this, FName("Menu"));
 }
 
 void UArkanoidGameInstance::SetLevelRecord(const FString& LevelName, const int32 NewRecord)

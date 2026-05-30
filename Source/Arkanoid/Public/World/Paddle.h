@@ -77,16 +77,17 @@ public:
 
 	float GetWidth() const;
 
-	//Работа с бонусами
+	//Р Р°Р±РѕС‚Р° СЃ Р±РѕРЅСѓСЃР°РјРё
 public:
 
 	void BonusChangeSize(const float AdditionalSize, const float BonusTime);
 	void BonusChangeLife(const int32 Amount);
 	void BonusChangeBallSpeed(const float AdditionalSpeed);
 	void BonusChangeBallPower(const int32 Amount, const float BonusTime);
-	// Включить бонус "прилипший шарик" на каретке на время BonusTime
+	void BonusBall(const float BallLifeTime) const;
+	// Р’РєР»СЋС‡РёС‚СЊ Р±РѕРЅСѓСЃ "РїСЂРёР»РёРїС€РёР№ С€Р°СЂРёРє" РЅР° РєР°СЂРµС‚РєРµ РЅР° РІСЂРµРјСЏ BonusTime
 	void BonusStickyBall(const float BonusTime);
-	// Попытка прикрепить указанный шарик к этой каретке. Возвращает true, если прикреплено.
+	// РџРѕРїС‹С‚РєР° РїСЂРёРєСЂРµРїРёС‚СЊ СѓРєР°Р·Р°РЅРЅС‹Р№ С€Р°СЂРёРє Рє СЌС‚РѕР№ РєР°СЂРµС‚РєРµ. Р’РѕР·РІСЂР°С‰Р°РµС‚ true, РµСЃР»Рё РїСЂРёРєСЂРµРїР»РµРЅРѕ.
 	bool TryAttachBall(ABall* Ball);
 
 protected:
@@ -96,8 +97,8 @@ protected:
 
 	UFUNCTION()
 	void SetDefaultSize();
-	// Флаг активированного режима прилипшего шарика
+	// Р¤Р»Р°Рі Р°РєС‚РёРІРёСЂРѕРІР°РЅРЅРѕРіРѕ СЂРµР¶РёРјР° РїСЂРёР»РёРїС€РµРіРѕ С€Р°СЂРёРєР°
 	bool bStickyEnabled = false;
-	// Отключить режим прилипшего шарика
+	// РћС‚РєР»СЋС‡РёС‚СЊ СЂРµР¶РёРј РїСЂРёР»РёРїС€РµРіРѕ С€Р°СЂРёРєР°
 	void DisableSticky();
 };

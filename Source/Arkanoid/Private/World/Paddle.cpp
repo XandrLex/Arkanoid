@@ -147,9 +147,8 @@ void APaddle::SpawnBall()
 {
 	if(BallClass && !CurrentBall)
 	{
-		const FVector SpawnLocation = Arrow->GetComponentLocation();
-		const FRotator SpawnRotation = Arrow->GetComponentRotation();
-		CurrentBall = GetWorld()->SpawnActor<ABall>(BallClass, SpawnLocation, SpawnRotation);
+		FTransform SpawnTransform = Arrow->GetComponentTransform();
+		CurrentBall = GetWorld()->SpawnActor<ABall>(BallClass, SpawnTransform);
 		if (CurrentBall)
 		{
 			CurrentBall->SetOwner(this);
@@ -238,17 +237,17 @@ void APaddle::SetDefaultSize()
 	BoxCollider->SetBoxExtent(FVector(25.0f, 50.0f + 20.0f / DefaultScale.Y, 25.0f));
 }
 
-// �������� ����� "��������� �����" �� ������� �� ����� BonusTime
+// Включает режим "прилипший шарик" на каретке на время BonusTime
 void APaddle::BonusStickyBall(const float BonusTime)
 {
 	if (BonusTime <= 0.0f)
 	{
-		// ���� ����� �� ������ � ������ �������� ���� ��� �������
+		// Если время не задано — просто включаем флаг без таймера
 		bStickyEnabled = true;
 		return;
 	}
 
-	// �������� �����, ���������� ������ � ��������� �����
+	// Включаем режим, сбрасываем таймер и запускаем новый
 	if (!bStickyEnabled)
 	{
 		bStickyEnabled = true;
@@ -257,17 +256,43 @@ void APaddle::BonusStickyBall(const float BonusTime)
 	GetWorld()->GetTimerManager().SetTimer(TimerForBonusSticky, this, &APaddle::DisableSticky, BonusTime, false);
 }
 
-// ��������� ����� "��������� �����"
+// Отключает режим "прилипший шарик"
 void APaddle::DisableSticky()
 {
 	bStickyEnabled = false;
 }
 
-// ������� ���������� ����� ��� ��� ������������ � ��������
+// Попытка прикрепить шарик при его столкновении с кареткой
 bool APaddle::TryAttachBall(ABall* Ball)
 {
-	if (!IsValid(Ball) || !bStickyEnabled)
+	// Не допускаем прикрепление, если шар некорректен или режим липкости отключён
+	if (!IsValid(Ball))
+	{
 		return false;
+	}
+	if (!bStickyEnabled)
+	{
+		return false;
+	}
+
+	// Проверка: есть ли уже шар, прикреплённый к этой каретке.
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (AActor* Actor : AttachedActors)
+	{
+		if (Actor && Cast<ABall>(Actor))
+		{
+			// Если уже есть прикреплённый шар (любой), отклоняем новую попытку.
+			return false;
+		}
+	}
+
+	// Дополнительная защита: CurrentBall может содержать ссылку на ранее созданный шар, убедимся что он не прикреплён сейчас
+	if (IsValid(CurrentBall) && CurrentBall->GetAttachParentActor() == this)
+	{
+		return false;
+	}
+
 	CurrentBall = Ball;
 	Ball->SetOwner(this);
 	Ball->SetBallState(EState::Idle);
@@ -279,4 +304,21 @@ bool APaddle::TryAttachBall(ABall* Ball)
 float APaddle::GetWidth() const
 {
 	return BoxCollider->GetScaledBoxExtent().Y;
+}
+
+void APaddle::BonusBall(const float BallLifeTime) const
+{
+	if (BallClass)
+	{
+		// Сдвигаем точку спавна вперёд по направлению Arrow, чтобы шар не пересекался с кареткой сразу
+		FVector SpawnLocation = Arrow->GetComponentLocation() + Arrow->GetForwardVector() * 150.0f;
+		const FRotator SpawnRotation = Arrow->GetComponentRotation();
+
+		if (IsValid(CurrentBall))
+			SpawnLocation.X = SpawnLocation.X + 50.0f;
+
+		const auto BonusBall = GetWorld()->SpawnActor<ABall>(BallClass, SpawnLocation, SpawnRotation);
+		if (BonusBall)
+			BonusBall->SetBallBonus(BallLifeTime);
+	}
 }
